@@ -3,3 +3,21 @@ controllers:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
+
+api_login_check:
+    path: /api/auth/login_check
+    methods: [POST]
+
+event_join:
+    path: /api/events/{id}/join
+    controller: App\Controller\EventController::join
+    methods: [POST]
+
+event_leave:
+    path: /api/events/{id}/leave
+    controller: App\Controller\EventController::leave
+    methods: [DELETE]
+
+api_logout:
+    path: /api/auth/logout
+    methods: [POST]
