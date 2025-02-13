@@ -199,57 +199,6 @@ POST /api/events/{id}/join
 DELETE /api/events/{id}/leave
 ```
 
-## Frontend Integration Examples
-
-### Authentication Service
-```typescript
-// src/services/auth.service.ts
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8000/api';
-
-export class AuthService {
-  static async login(email: string, password: string) {
-    const response = await axios.post(`${API_URL}/auth/login`, {
-      email,
-      password
-    });
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-    }
-    return response.data;
-  }
-
-  static getAuthHeader() {
-    const token = localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }
-}
-```
-
-### Event Service
-```typescript
-// src/services/event.service.ts
-import axios from 'axios';
-import { AuthService } from './auth.service';
-b
-const API_URL = 'http://localhost:8000/api';
-
-export class EventService {
-  static async getEvents() {
-    return axios.get(`${API_URL}/events`, {
-      headers: AuthService.getAuthHeader()
-    });
-  }
-
-  static async joinEvent(eventId: number) {
-    return axios.post(`${API_URL}/events/${eventId}/join`, {}, {
-      headers: AuthService.getAuthHeader()
-    });
-  }
-}
-```
-
 ## Error Handling
 
 The API returns standard HTTP status codes:
