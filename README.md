@@ -167,7 +167,8 @@ Content-Type: application/json
 {
     "title": "New Event",
     "description": "Event description",
-    "date": "2024-12-31T00:00:00Z",
+    "startDate": "2024-12-31T18:00:00Z",
+    "endDate": "2024-12-31T22:00:00Z",
     "location": "Event Location",
     "available_places": 100,
     "price": 0,
@@ -182,7 +183,8 @@ Content-Type: application/json
 {
     "title": "Updated Title", // Optional
     "description": "Updated desc", // Optional
-    "date": "2024-12-31T00:00:00Z", // Optional
+    "startDate": "2024-12-31T18:00:00Z", // Optional
+    "endDate": "2024-12-31T22:00:00Z", // Optional
     "location": "New Location", // Optional
     "available_places": 150, // Optional
     "price": 25.99, // Optional

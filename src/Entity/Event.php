@@ -23,9 +23,6 @@ class Event implements JsonSerializable
     #[ORM\Column(type: Types::TEXT)]
     private ?string $description = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $date = null;
-
     #[ORM\Column(length: 255)]
     private ?string $location = null;
 
@@ -50,6 +47,12 @@ class Event implements JsonSerializable
 
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
+
+    #[ORM\Column(type: 'datetime')]
+    private ?\DateTimeInterface $startDate = null;
+
+    #[ORM\Column(type: 'datetime')]
+    private ?\DateTimeInterface $endDate = null;
 
     public function __construct()
     {
@@ -83,18 +86,6 @@ class Event implements JsonSerializable
     public function setDescription(string $description): self
     {
         $this->description = $description;
-
-        return $this;
-    }
-
-    public function getDate(): ?\DateTimeInterface
-    {
-        return $this->date;
-    }
-
-    public function setDate(\DateTimeInterface $date): self
-    {
-        $this->date = $date;
 
         return $this;
     }
@@ -214,29 +205,54 @@ class Event implements JsonSerializable
         return $this->available_places > $this->attendees->count();
     }
 
+    public function getStartDate(): ?\DateTimeInterface
+    {
+        return $this->startDate;
+    }
+
+    public function setStartDate(\DateTimeInterface $startDate): self
+    {
+        $this->startDate = $startDate;
+        return $this;
+    }
+
+    public function getEndDate(): ?\DateTimeInterface
+    {
+        return $this->endDate;
+    }
+
+    public function setEndDate(\DateTimeInterface $endDate): self
+    {
+        $this->endDate = $endDate;
+        return $this;
+    }
+
     public function jsonSerialize(): array
     {
         return [
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
-            'date' => $this->date?->format('Y-m-d\TH:i:s\Z'),
+            'startDate' => $this->startDate ? $this->startDate->format('Y-m-d\TH:i:s\Z') : null,
+            'endDate' => $this->endDate ? $this->endDate->format('Y-m-d\TH:i:s\Z') : null,
             'location' => $this->location,
             'available_places' => $this->available_places,
             'price' => $this->price,
             'image_url' => $this->image_url,
-            'creator' => [
-                'id' => $this->creator?->getId(),
-                'name' => $this->creator?->getName(),
-                'email' => $this->creator?->getEmail(),
-            ],
-            'attendees' => $this->attendees->map(fn(User $user) => [
-                'id' => $user->getId(),
-                'name' => $user->getName(),
-                'email' => $user->getEmail(),
-            ])->toArray(),
-            'createdAt' => $this->createdAt?->format('Y-m-d\TH:i:s\Z'),
-            'updatedAt' => $this->updatedAt?->format('Y-m-d\TH:i:s\Z'),
+            'creator' => $this->creator ? [
+                'id' => $this->creator->getId(),
+                'email' => $this->creator->getEmail(),
+                'name' => $this->creator->getName()
+            ] : null,
+            'attendees' => $this->attendees->map(function($user) {
+                return [
+                    'id' => $user->getId(),
+                    'email' => $user->getEmail(),
+                    'name' => $user->getName()
+                ];
+            })->toArray(),
+            'createdAt' => $this->createdAt ? $this->createdAt->format('Y-m-d\TH:i:s\Z') : null,
+            'updatedAt' => $this->updatedAt ? $this->updatedAt->format('Y-m-d\TH:i:s\Z') : null
         ];
     }
 }

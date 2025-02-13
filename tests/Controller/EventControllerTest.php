@@ -53,7 +53,7 @@ class EventControllerTest extends WebTestCase
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
-                'username' => $userData['email'],
+                'email' => $userData['email'],
                 'password' => $userData['password']
             ])
         );
@@ -75,7 +75,8 @@ class EventControllerTest extends WebTestCase
         $event = new Event();
         $event->setTitle('Test Event');
         $event->setDescription('Test Description');
-        $event->setDate(new \DateTime('2024-12-31'));
+        $event->setStartDate(new \DateTime('2024-12-31T18:00:00Z'));
+        $event->setEndDate(new \DateTime('2024-12-31T22:00:00Z'));
         $event->setLocation('Test Location');
         $event->setAvailablePlaces(100);
         $event->setPrice(0);
@@ -136,7 +137,8 @@ class EventControllerTest extends WebTestCase
         $eventData = [
             'title' => 'New Event',
             'description' => 'New Description',
-            'date' => '2024-12-31T00:00:00Z',
+            'startDate' => '2024-12-31T18:00:00Z',
+            'endDate' => '2024-12-31T22:00:00Z',
             'location' => 'New Location',
             'available_places' => 50,
             'price' => 10
@@ -229,6 +231,33 @@ class EventControllerTest extends WebTestCase
         $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
         $response = json_decode($this->client->getResponse()->getContent(), true);
         $this->assertNotContains($this->testUser->getId(), array_column($response['attendees'], 'id'));
+    }
+
+    public function testCreateEventWithInvalidDates(): void
+    {
+        $eventData = [
+            'title' => 'Invalid Event',
+            'description' => 'Invalid Description',
+            'startDate' => '2024-12-31T22:00:00Z', // Later time
+            'endDate' => '2024-12-31T18:00:00Z',   // Earlier time
+            'location' => 'Test Location',
+            'available_places' => 50,
+            'price' => 10
+        ];
+
+        $this->client->request(
+            'POST',
+            '/api/events',
+            [],
+            [],
+            $this->getHeaders(),
+            json_encode($eventData)
+        );
+
+        $this->assertEquals(400, $this->client->getResponse()->getStatusCode());
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertArrayHasKey('error', $response);
+        $this->assertEquals('End date must be after start date', $response['error']);
     }
 
     protected function tearDown(): void

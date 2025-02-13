@@ -37,10 +37,27 @@ class EventController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        // Validate dates
+        try {
+            $startDate = new \DateTime($data['startDate']);
+            $endDate = new \DateTime($data['endDate']);
+
+            if ($endDate <= $startDate) {
+                return $this->json([
+                    'error' => 'End date must be after start date'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Invalid date format'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
         $event = new Event();
         $event->setTitle($data['title']);
         $event->setDescription($data['description']);
-        $event->setDate(new \DateTime($data['date']));
+        $event->setStartDate($startDate);
+        $event->setEndDate($endDate);
         $event->setLocation($data['location']);
         $event->setAvailablePlaces($data['available_places']);
         $event->setPrice($data['price'] ?? 0);
@@ -62,14 +79,39 @@ class EventController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
 
+        // Handle dates if either is provided
+        if (isset($data['startDate']) || isset($data['endDate'])) {
+            try {
+                $startDate = isset($data['startDate']) 
+                    ? new \DateTime($data['startDate']) 
+                    : $event->getStartDate();
+                
+                $endDate = isset($data['endDate']) 
+                    ? new \DateTime($data['endDate']) 
+                    : $event->getEndDate();
+
+                // Validate dates
+                if ($endDate <= $startDate) {
+                    return $this->json([
+                        'error' => 'End date must be after start date'
+                    ], Response::HTTP_BAD_REQUEST);
+                }
+
+                $event->setStartDate($startDate);
+                $event->setEndDate($endDate);
+            } catch (\Exception $e) {
+                return $this->json([
+                    'error' => 'Invalid date format'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }
+
+        // Update other fields if they are present
         if (isset($data['title'])) {
             $event->setTitle($data['title']);
         }
         if (isset($data['description'])) {
             $event->setDescription($data['description']);
-        }
-        if (isset($data['date'])) {
-            $event->setDate(new \DateTime($data['date']));
         }
         if (isset($data['location'])) {
             $event->setLocation($data['location']);
@@ -83,6 +125,9 @@ class EventController extends AbstractController
         if (isset($data['image_url'])) {
             $event->setImageUrl($data['image_url']);
         }
+
+        // Update the updatedAt timestamp
+        $event->setUpdatedAt(new \DateTimeImmutable());
 
         $this->entityManager->flush();
 
@@ -130,78 +175,5 @@ class EventController extends AbstractController
         $this->entityManager->flush();
 
         return $this->json($event);
-    }
-
-    #[Route('/events/{id}', name: 'update_event', methods: ['PUT'])]
-    public function updateEvent(
-        Request $request,
-        Event $event,
-        EntityManagerInterface $entityManager
-    ): JsonResponse {
-        // Check if user is the creator of the event
-        if ($event->getCreator() !== $this->getUser()) {
-            return $this->json(['error' => 'You can only update your own events'], Response::HTTP_FORBIDDEN);
-        }
-
-        $data = json_decode($request->getContent(), true);
-
-        // Update fields if they are present in the request
-        if (isset($data['title'])) {
-            $event->setTitle($data['title']);
-        }
-        
-        if (isset($data['description'])) {
-            $event->setDescription($data['description']);
-        }
-        
-        if (isset($data['date'])) {
-            try {
-                $date = new \DateTimeImmutable($data['date']);
-                $event->setDate($date);
-            } catch (\Exception $e) {
-                return $this->json(['error' => 'Invalid date format'], Response::HTTP_BAD_REQUEST);
-            }
-        }
-        
-        if (isset($data['location'])) {
-            $event->setLocation($data['location']);
-        }
-        
-        if (isset($data['available_places'])) {
-            $event->setAvailablePlaces($data['available_places']);
-        }
-        
-        if (isset($data['price'])) {
-            $event->setPrice($data['price']);
-        }
-        
-        if (isset($data['image_url'])) {
-            $event->setImageUrl($data['image_url']);
-        }
-
-        // Update the updatedAt timestamp
-        $event->setUpdatedAt(new \DateTimeImmutable());
-
-        $entityManager->flush();
-
-        return $this->json([
-            'message' => 'Event updated successfully',
-            'event' => [
-                'id' => $event->getId(),
-                'title' => $event->getTitle(),
-                'description' => $event->getDescription(),
-                'date' => $event->getDate()->format('Y-m-d\TH:i:s\Z'),
-                'location' => $event->getLocation(),
-                'available_places' => $event->getAvailablePlaces(),
-                'price' => $event->getPrice(),
-                'image_url' => $event->getImageUrl(),
-                'creator' => [
-                    'id' => $event->getCreator()->getId(),
-                    'name' => $event->getCreator()->getName()
-                ],
-                'created_at' => $event->getCreatedAt()->format('Y-m-d\TH:i:s\Z'),
-                'updated_at' => $event->getUpdatedAt()->format('Y-m-d\TH:i:s\Z')
-            ]
-        ]);
     }
 }
