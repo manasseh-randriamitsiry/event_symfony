@@ -36,6 +36,7 @@ cd event_manager
 
 3. Install dependencies:
 ```bash
+https://getcomposer.org/
 composer install
 ```
 
