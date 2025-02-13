@@ -1,15 +1,6 @@
 doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
-        server_version: '8.0.32'
-        driver: pdo_mysql
-        charset: utf8mb4
-        default_table_options:
-            charset: utf8mb4
-            collate: utf8mb4_unicode_ci
-
-        profiling_collect_backtrace: '%kernel.debug%'
-        use_savepoints: true
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true
