@@ -1,16 +1,17 @@
 # Event Manager API
 
 A RESTful API for managing events, built with Symfony 7. This API allows users to create, manage, and participate in events.
-As this is a personnal project, all the configurations are pushed, no exceptions, so this will allow me to install the project fast. 
+As this is a personal project, all the configurations are pushed, no exceptions, so this will allow me to install the project fast. 
 
 ## Features
 
 - User Authentication (JWT)
-- Event Management
-- Event Participation
+- Event Management (CRUD operations)
+- Event Participation (Join/Leave)
 - Secure Cookie Handling
 - Role-based Access Control
 - SQLite Database for easy development
+- Comprehensive Test Suite
 
 ## Prerequisites
 
@@ -176,14 +177,19 @@ Content-Type: application/json
 
 #### Update Event
 ```http
-PUT /api/events/{id}
+UT /api/events/{id}
 Content-Type: application/json
-
 {
-    "title": "Updated Title",
-    "description": "Updated description"
+    "title": "Updated Title", // Optional
+    "description": "Updated desc", // Optional
+    "date": "2024-12-31T00:00:00Z", // Optional
+    "location": "New Location", // Optional
+    "available_places": 150, // Optional
+    "price": 25.99, // Optional
+    "image_url": "https://..." // Optional
 }
 ```
+Response (200 OK): Updated event object
 
 #### Delete Event
 ```http
