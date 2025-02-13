@@ -1,6 +1,7 @@
 # Event Manager API
 
-A RESTful API for managing events, built with Symfony 6. This API allows users to create, manage, and participate in events.
+A RESTful API for managing events, built with Symfony 7. This API allows users to create, manage, and participate in events.
+As this is a personnal project, all the configurations are pushed, no exceptions, so this will allow me to install the project fast. 
 
 ## Features
 
