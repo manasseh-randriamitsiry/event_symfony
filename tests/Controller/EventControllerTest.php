@@ -70,16 +70,16 @@ class EventControllerTest extends WebTestCase
         $this->assertNotNull($this->testUser, 'Test user not found in database');
     }
 
-    private function createTestEvent(): Event
+    private function createTestEvent(array $data = []): Event
     {
         $event = new Event();
-        $event->setTitle('Test Event');
-        $event->setDescription('Test Description');
-        $event->setStartDate(new \DateTime('2024-12-31T18:00:00Z'));
-        $event->setEndDate(new \DateTime('2024-12-31T22:00:00Z'));
-        $event->setLocation('Test Location');
-        $event->setAvailablePlaces(100);
-        $event->setPrice(0);
+        $event->setTitle($data['title'] ?? 'Test Event');
+        $event->setDescription($data['description'] ?? 'Test Description');
+        $event->setStartDate($data['startDate'] ?? new \DateTime('2024-12-31T18:00:00Z'));
+        $event->setEndDate($data['endDate'] ?? new \DateTime('2024-12-31T22:00:00Z'));
+        $event->setLocation($data['location'] ?? 'Test Location');
+        $event->setAvailablePlaces($data['available_places'] ?? 100);
+        $event->setPrice($data['price'] ?? 0);
         $event->setCreator($this->testUser);
 
         $this->entityManager->persist($event);
@@ -258,6 +258,149 @@ class EventControllerTest extends WebTestCase
         $response = json_decode($this->client->getResponse()->getContent(), true);
         $this->assertArrayHasKey('error', $response);
         $this->assertEquals('End date must be after start date', $response['error']);
+    }
+
+    public function testUpcomingEvents(): void
+    {
+        // Create past event
+        $this->createTestEvent([
+            'title' => 'Past Event',
+            'startDate' => new \DateTime('-2 days'),
+            'endDate' => new \DateTime('-1 day')
+        ]);
+
+        // Create upcoming event
+        $this->createTestEvent([
+            'title' => 'Future Event',
+            'startDate' => new \DateTime('+1 day'),
+            'endDate' => new \DateTime('+2 days')
+        ]);
+
+        $this->client->request('GET', '/api/events/upcoming', [], [], $this->getHeaders());
+
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        
+        $this->assertIsArray($response);
+        $this->assertCount(1, $response);
+        $this->assertEquals('Future Event', $response[0]['title']);
+    }
+
+    public function testPastEvents(): void
+    {
+        // Create past event
+        $this->createTestEvent([
+            'title' => 'Past Event',
+            'startDate' => new \DateTime('-2 days'),
+            'endDate' => new \DateTime('-1 day')
+        ]);
+
+        // Create upcoming event
+        $this->createTestEvent([
+            'title' => 'Future Event',
+            'startDate' => new \DateTime('+1 day'),
+            'endDate' => new \DateTime('+2 days')
+        ]);
+
+        $this->client->request('GET', '/api/events/past', [], [], $this->getHeaders());
+
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        
+        $this->assertIsArray($response);
+        $this->assertCount(1, $response);
+        $this->assertEquals('Past Event', $response[0]['title']);
+    }
+
+    public function testSearchEvents(): void
+    {
+        // Create test events with different properties
+        $this->createTestEvent([
+            'title' => 'Concert in Paris',
+            'location' => 'Paris',
+            'price' => 50,
+            'startDate' => new \DateTime('+1 week'),
+            'endDate' => new \DateTime('+1 week +4 hours')
+        ]);
+
+        $this->createTestEvent([
+            'title' => 'Workshop in London',
+            'location' => 'London',
+            'price' => 100,
+            'startDate' => new \DateTime('+2 weeks'),
+            'endDate' => new \DateTime('+2 weeks +4 hours')
+        ]);
+
+        // Test search by title
+        $this->client->request('GET', '/api/events/search?q=Concert', [], [], $this->getHeaders());
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertCount(1, $response);
+        $this->assertEquals('Concert in Paris', $response[0]['title']);
+
+        // Test search by location
+        $this->client->request('GET', '/api/events/search?location=London', [], [], $this->getHeaders());
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertCount(1, $response);
+        $this->assertEquals('Workshop in London', $response[0]['title']);
+
+        // Test search by price range
+        $this->client->request('GET', '/api/events/search?min_price=75&max_price=150', [], [], $this->getHeaders());
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertCount(1, $response);
+        $this->assertEquals('Workshop in London', $response[0]['title']);
+    }
+
+    public function testEventStatistics(): void
+    {
+        $event = $this->createTestEvent([
+            'available_places' => 10
+        ]);
+
+        // Add some attendees
+        $event->addAttendee($this->testUser);
+        $this->entityManager->flush();
+
+        $this->client->request('GET', "/api/events/{$event->getId()}/statistics", [], [], $this->getHeaders());
+        
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+
+        $this->assertArrayHasKey('total_places', $response);
+        $this->assertArrayHasKey('attendees_count', $response);
+        $this->assertArrayHasKey('available_places', $response);
+        $this->assertArrayHasKey('occupancy_rate', $response);
+        $this->assertArrayHasKey('is_full', $response);
+
+        $this->assertEquals(10, $response['total_places']);
+        $this->assertEquals(1, $response['attendees_count']);
+        $this->assertEquals(9, $response['available_places']);
+        $this->assertEquals(10.0, $response['occupancy_rate']);
+        $this->assertFalse($response['is_full']);
+    }
+
+    public function testEventParticipants(): void
+    {
+        $event = $this->createTestEvent();
+        
+        // Add the test user as an attendee
+        $event->addAttendee($this->testUser);
+        $this->entityManager->flush();
+
+        $this->client->request('GET', "/api/events/{$event->getId()}/participants", [], [], $this->getHeaders());
+        
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+
+        $this->assertArrayHasKey('event_id', $response);
+        $this->assertArrayHasKey('event_title', $response);
+        $this->assertArrayHasKey('total_participants', $response);
+        $this->assertArrayHasKey('participants', $response);
+
+        $this->assertEquals($event->getId(), $response['event_id']);
+        $this->assertEquals('Test Event', $response['event_title']);
+        $this->assertEquals(1, $response['total_participants']);
+        $this->assertCount(1, $response['participants']);
+        $this->assertEquals('test@example.com', $response['participants'][0]['email']);
     }
 
     protected function tearDown(): void

@@ -104,16 +104,16 @@ Response:
 Note: A secure HTTP-only cookie (BEARER) will also be set containing the JWT token
 ```
 #### Update Profile
-```
-http
+```http
 PUT /api/auth/profile
 Authorization: Bearer <token>
 Content-Type: application/json
+
 {
-"name": "Updated Name", // Optional
-"email": "new@example.com", // Optional
-"current_password": "old_password", // Required only when changing password
-"new_password": "new_password" // Required only when changing password
+    "name": "Updated Name", // Optional
+    "email": "new@example.com", // Optional
+    "current_password": "old_password", // Required only when changing password
+    "new_password": "new_password" // Required only when changing password
 }
 ```
 
@@ -125,31 +125,23 @@ Content-Type: application/json
 {
     "email": "user@example.com",
     "password": "password123",
-    "name": "John Doe"
+    "name": "User Name"
 }
-```
 
-#### Edit Profile
-```http
-PUT /api/auth/profile
-Authorization: Bearer <your_jwt_token>
-Content-Type: application/json
+Response:
 {
-"name": "Updated Name", // Optional
-"email": "new@example.com", // Optional
-"current_password": "old123", // Required only when changing password
-"new_password": "new123" // Required only when changing password
+    "message": "User registered successfully",
+    "user": {
+        "id": 1,
+        "email": "user@example.com",
+        "name": "User Name"
+    }
 }
 ```
 
-### Event Endpoints
+### Events
 
-All event endpoints require JWT authentication header:
-```http
-Authorization: Bearer <your_jwt_token>
-```
-
-#### List Events
+#### List All Events
 ```http
 GET /api/events
 ```
@@ -162,51 +154,158 @@ GET /api/events/{id}
 #### Create Event
 ```http
 POST /api/events
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-    "title": "New Event",
-    "description": "Event description",
+    "title": "Event Title",
+    "description": "Event Description",
     "startDate": "2024-12-31T18:00:00Z",
     "endDate": "2024-12-31T22:00:00Z",
     "location": "Event Location",
     "available_places": 100,
     "price": 0,
-    "image_url": "https://example.com/image.jpg"
+    "image_url": "https://example.com/image.jpg" // Optional
 }
 ```
 
 #### Update Event
 ```http
-UT /api/events/{id}
+PUT /api/events/{id}
+Authorization: Bearer <token>
 Content-Type: application/json
+
 {
     "title": "Updated Title", // Optional
-    "description": "Updated desc", // Optional
-    "startDate": "2024-12-31T18:00:00Z", // Optional
-    "endDate": "2024-12-31T22:00:00Z", // Optional
-    "location": "New Location", // Optional
+    "description": "Updated Description", // Optional
+    "startDate": "2024-12-31T19:00:00Z", // Optional
+    "endDate": "2024-12-31T23:00:00Z", // Optional
+    "location": "Updated Location", // Optional
     "available_places": 150, // Optional
-    "price": 25.99, // Optional
-    "image_url": "https://..." // Optional
+    "price": 10, // Optional
+    "image_url": "https://example.com/new-image.jpg" // Optional
 }
 ```
-Response (200 OK): Updated event object
 
 #### Delete Event
 ```http
 DELETE /api/events/{id}
+Authorization: Bearer <token>
 ```
 
 #### Join Event
 ```http
 POST /api/events/{id}/join
+Authorization: Bearer <token>
 ```
 
 #### Leave Event
 ```http
 DELETE /api/events/{id}/leave
+Authorization: Bearer <token>
 ```
+
+### New Event Endpoints (Latest Addition)
+
+#### Get Upcoming Events
+```http
+GET /api/events/upcoming
+
+Response:
+[
+    {
+        "id": 1,
+        "title": "Future Event",
+        "description": "Event Description",
+        "startDate": "2024-12-31T18:00:00Z",
+        "endDate": "2024-12-31T22:00:00Z",
+        "location": "Event Location",
+        "available_places": 100,
+        "price": 0,
+        "attendees": []
+    }
+]
+```
+
+#### Get Past Events
+```http
+GET /api/events/past
+
+Response:
+[
+    {
+        "id": 2,
+        "title": "Past Event",
+        "description": "Event Description",
+        "startDate": "2023-12-31T18:00:00Z",
+        "endDate": "2023-12-31T22:00:00Z",
+        "location": "Event Location",
+        "available_places": 100,
+        "price": 0,
+        "attendees": []
+    }
+]
+```
+
+#### Search Events
+```http
+GET /api/events/search
+
+Query Parameters:
+- q: Search term in title and description
+- start_date: Filter by start date (ISO 8601 format)
+- end_date: Filter by end date (ISO 8601 format)
+- location: Filter by location
+- min_price: Filter by minimum price
+- max_price: Filter by maximum price
+- has_available_places: Filter events with available places
+
+Example:
+GET /api/events/search?q=concert&location=Paris&min_price=10&max_price=100&has_available_places=1
+```
+
+#### Get Event Statistics
+```http
+GET /api/events/{id}/statistics
+
+Response:
+{
+    "total_places": 100,
+    "attendees_count": 45,
+    "available_places": 55,
+    "occupancy_rate": 45.0,
+    "is_full": false
+}
+```
+
+#### Get Event Participants
+```http
+GET /api/events/{id}/participants
+Authorization: Bearer <token>
+
+Response:
+{
+    "event_id": 1,
+    "event_title": "Event Title",
+    "total_participants": 45,
+    "participants": [
+        {
+            "id": 1,
+            "name": "User Name",
+            "email": "user@example.com"
+        }
+    ]
+}
+```
+
+## Testing
+
+Run the test suite:
+```bash
+php bin/phpunit
+```
+
+The test suite includes comprehensive tests for all endpoints, including authentication, event management, and participant handling.
 
 ## Error Handling
 

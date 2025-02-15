@@ -32,6 +32,10 @@ security:
         - { path: ^/api/auth/logout, roles: PUBLIC_ACCESS }
         - { path: ^/api/events$, methods: [GET], roles: PUBLIC_ACCESS }
         - { path: ^/api/events/\d+$, methods: [GET], roles: PUBLIC_ACCESS }
+        - { path: ^/api/events/upcoming, methods: [GET], roles: PUBLIC_ACCESS }
+        - { path: ^/api/events/past, methods: [GET], roles: PUBLIC_ACCESS }
+        - { path: ^/api/events/search, methods: [GET], roles: PUBLIC_ACCESS }
+        - { path: ^/api/events/\d+/statistics, methods: [GET], roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/favicon\.ico, roles: PUBLIC_ACCESS }
 

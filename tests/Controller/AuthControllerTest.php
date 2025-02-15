@@ -104,7 +104,7 @@ class AuthControllerTest extends WebTestCase
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
-                'username' => $userData['email'],
+                'email' => $userData['email'],
                 'password' => $userData['password']
             ])
         );
@@ -142,7 +142,7 @@ class AuthControllerTest extends WebTestCase
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
-                'username' => 'nonexistent@example.com',
+                'email' => 'nonexistent@example.com',
                 'password' => 'wrongpassword'
             ])
         );
@@ -248,7 +248,7 @@ class AuthControllerTest extends WebTestCase
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
-                'username' => 'login@example.com',
+                'email' => 'login@example.com',
                 'password' => 'newpassword123'
             ])
         );

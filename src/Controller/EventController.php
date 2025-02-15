@@ -26,6 +26,134 @@ class EventController extends AbstractController
         return $this->json($events);
     }
 
+    #[Route('/upcoming', name: 'event_upcoming', methods: ['GET'])]
+    public function upcoming(): JsonResponse
+    {
+        $now = new \DateTime();
+        $events = $this->entityManager->getRepository(Event::class)
+            ->createQueryBuilder('e')
+            ->where('e.startDate > :now')
+            ->setParameter('now', $now)
+            ->orderBy('e.startDate', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $this->json($events);
+    }
+
+    #[Route('/past', name: 'event_past', methods: ['GET'])]
+    public function past(): JsonResponse
+    {
+        $now = new \DateTime();
+        $events = $this->entityManager->getRepository(Event::class)
+            ->createQueryBuilder('e')
+            ->where('e.endDate < :now')
+            ->setParameter('now', $now)
+            ->orderBy('e.endDate', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return $this->json($events);
+    }
+
+    #[Route('/search', name: 'event_search', methods: ['GET'])]
+    public function search(Request $request): JsonResponse
+    {
+        $queryBuilder = $this->entityManager->getRepository(Event::class)
+            ->createQueryBuilder('e');
+
+        // Search by title or description
+        if ($search = $request->query->get('q')) {
+            $queryBuilder
+                ->where('e.title LIKE :search')
+                ->orWhere('e.description LIKE :search')
+                ->setParameter('search', '%' . $search . '%');
+        }
+
+        // Filter by date range
+        if ($startDate = $request->query->get('start_date')) {
+            $queryBuilder
+                ->andWhere('e.startDate >= :startDate')
+                ->setParameter('startDate', new \DateTime($startDate));
+        }
+
+        if ($endDate = $request->query->get('end_date')) {
+            $queryBuilder
+                ->andWhere('e.endDate <= :endDate')
+                ->setParameter('endDate', new \DateTime($endDate));
+        }
+
+        // Filter by location
+        if ($location = $request->query->get('location')) {
+            $queryBuilder
+                ->andWhere('e.location LIKE :location')
+                ->setParameter('location', '%' . $location . '%');
+        }
+
+        // Filter by price range
+        if ($minPrice = $request->query->get('min_price')) {
+            $queryBuilder
+                ->andWhere('e.price >= :minPrice')
+                ->setParameter('minPrice', $minPrice);
+        }
+
+        if ($maxPrice = $request->query->get('max_price')) {
+            $queryBuilder
+                ->andWhere('e.price <= :maxPrice')
+                ->setParameter('maxPrice', $maxPrice);
+        }
+
+        // Filter by available places
+        if ($request->query->has('has_available_places')) {
+            $queryBuilder
+                ->andWhere('e.available_places > SIZE(e.attendees)');
+        }
+
+        $events = $queryBuilder
+            ->orderBy('e.startDate', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $this->json($events);
+    }
+
+    #[Route('/{id}/statistics', name: 'event_statistics', methods: ['GET'])]
+    public function statistics(Event $event): JsonResponse
+    {
+        $attendeesCount = $event->getAttendees()->count();
+        $availablePlaces = $event->getAvailablePlaces();
+        $occupancyRate = $availablePlaces > 0 
+            ? round(($attendeesCount / $availablePlaces) * 100, 2) 
+            : 0;
+
+        return $this->json([
+            'total_places' => $availablePlaces,
+            'attendees_count' => $attendeesCount,
+            'available_places' => $availablePlaces - $attendeesCount,
+            'occupancy_rate' => $occupancyRate,
+            'is_full' => !$event->hasAvailablePlaces(),
+        ]);
+    }
+
+    #[Route('/{id}/participants', name: 'event_participants', methods: ['GET'])]
+    public function participants(Event $event): JsonResponse
+    {
+        $attendees = $event->getAttendees()->map(function($user) {
+            return [
+                'id' => $user->getId(),
+                'name' => $user->getName(),
+                'email' => $user->getEmail(),
+            ];
+        })->toArray();
+
+        return $this->json([
+            'event_id' => $event->getId(),
+            'event_title' => $event->getTitle(),
+            'total_participants' => count($attendees),
+            'participants' => $attendees,
+        ]);
+    }
+
     #[Route('/{id}', name: 'event_show', methods: ['GET'])]
     public function show(Event $event): JsonResponse
     {
