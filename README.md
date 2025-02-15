@@ -8,6 +8,8 @@ As this is a personal project, all the configurations are pushed, no exceptions,
 - User Authentication (JWT)
 - Event Management (CRUD operations)
 - Event Participation (Join/Leave)
+- Event Search and Filtering
+- Event Statistics and Analytics
 - Secure Cookie Handling
 - Role-based Access Control
 - SQLite Database for easy development
@@ -77,9 +79,9 @@ sudo apt-get install sqlitebrowser
 sqlitebrowser database/db.sqlite
 ```
 
-## API Endpoints
+## API Documentation
 
-### Authentication
+### 1. Authentication Endpoints
 
 #### Login
 ```http
@@ -102,19 +104,6 @@ Response:
 }
 
 Note: A secure HTTP-only cookie (BEARER) will also be set containing the JWT token
-```
-#### Update Profile
-```http
-PUT /api/auth/profile
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-    "name": "Updated Name", // Optional
-    "email": "new@example.com", // Optional
-    "current_password": "old_password", // Required only when changing password
-    "new_password": "new_password" // Required only when changing password
-}
 ```
 
 #### Register
@@ -139,7 +128,32 @@ Response:
 }
 ```
 
-### Events
+#### Update Profile
+```http
+PUT /api/auth/profile
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+    "name": "Updated Name", // Optional
+    "email": "new@example.com", // Optional
+    "current_password": "old_password", // Required only when changing password
+    "new_password": "new_password" // Required only when changing password
+}
+```
+
+#### Logout
+```http
+POST /api/auth/logout
+Authorization: Bearer <token>
+
+Response:
+{
+    "message": "Logged out successfully"
+}
+```
+
+### 2. Basic Event Management
 
 #### List All Events
 ```http
@@ -193,6 +207,8 @@ DELETE /api/events/{id}
 Authorization: Bearer <token>
 ```
 
+### 3. Event Participation
+
 #### Join Event
 ```http
 POST /api/events/{id}/join
@@ -205,9 +221,11 @@ DELETE /api/events/{id}/leave
 Authorization: Bearer <token>
 ```
 
-### New Event Endpoints (Latest Addition)
+### 4. Advanced Event Features
 
-#### Get Upcoming Events
+#### 4.1 Event Discovery
+
+##### Get Upcoming Events
 ```http
 GET /api/events/upcoming
 
@@ -227,7 +245,7 @@ Response:
 ]
 ```
 
-#### Get Past Events
+##### Get Past Events
 ```http
 GET /api/events/past
 
@@ -247,7 +265,9 @@ Response:
 ]
 ```
 
-#### Search Events
+#### 4.2 Search and Filtering
+
+##### Search Events
 ```http
 GET /api/events/search
 
@@ -264,7 +284,9 @@ Example:
 GET /api/events/search?q=concert&location=Paris&min_price=10&max_price=100&has_available_places=1
 ```
 
-#### Get Event Statistics
+#### 4.3 Event Analytics
+
+##### Get Event Statistics
 ```http
 GET /api/events/{id}/statistics
 
@@ -278,7 +300,7 @@ Response:
 }
 ```
 
-#### Get Event Participants
+##### Get Event Participants
 ```http
 GET /api/events/{id}/participants
 Authorization: Bearer <token>
