@@ -10,25 +10,26 @@ security:
 
     firewalls:
         dev:
-            pattern: ^/(_(profiler|wdt)|css|images|js|favicon\.ico)/
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
         
         main:
-            pattern: ^/api
-            stateless: true
+            lazy: true
             provider: app_user_provider
             json_login:
-                check_path: /api/auth/login
+                check_path: app_login
                 username_path: email
                 password_path: password
-                success_handler: app.jwt_authentication_success_handler
-                failure_handler: lexik_jwt_authentication.handler.authentication_failure
-            jwt: 
-                provider: app_user_provider
+            stateless: false
+            jwt: ~
 
     access_control:
         - { path: ^/api/auth/login, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/forgot-password, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/verify-reset-code, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/reset-password, roles: PUBLIC_ACCESS }
+        - { path: ^/api/auth/verify-account, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth/logout, roles: PUBLIC_ACCESS }
         - { path: ^/api/events$, methods: [GET], roles: PUBLIC_ACCESS }
         - { path: ^/api/events/\d+$, methods: [GET], roles: PUBLIC_ACCESS }
@@ -36,7 +37,7 @@ security:
         - { path: ^/api/events/past, methods: [GET], roles: PUBLIC_ACCESS }
         - { path: ^/api/events/search, methods: [GET], roles: PUBLIC_ACCESS }
         - { path: ^/api/events/\d+/statistics, methods: [GET], roles: PUBLIC_ACCESS }
-        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api, roles: ROLE_USER }
         - { path: ^/favicon\.ico, roles: PUBLIC_ACCESS }
 
 when@test:

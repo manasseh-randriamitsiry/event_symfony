@@ -6,6 +6,8 @@ As this is a personal project, all the configurations are pushed, no exceptions,
 ## Features
 
 - User Authentication (JWT)
+- Email Verification for Account Activation
+- Password Reset with Email Verification
 - Event Management (CRUD operations)
 - Event Participation (Join/Leave)
 - Event Search and Filtering
@@ -14,6 +16,7 @@ As this is a personal project, all the configurations are pushed, no exceptions,
 - Role-based Access Control
 - SQLite Database for easy development
 - Comprehensive Test Suite
+- Email Testing with MailHog
 
 ## Prerequisites
 
@@ -22,6 +25,7 @@ As this is a personal project, all the configurations are pushed, no exceptions,
 - Symfony CLI
 - SQLite3
 - OpenSSL for JWT keys
+- Docker (for MailHog)
 
 ## Installation
 
@@ -53,9 +57,10 @@ php bin/console lexik:jwt:generate-keypair
 cp .env .env.local
 ```
 
-Edit `.env.local` and ensure the DATABASE_URL is set to:
+Edit `.env.local` and ensure the DATABASE_URL and MAILER_DSN are set:
 ```
 DATABASE_URL="sqlite:///%kernel.project_dir%/database/db.sqlite"
+MAILER_DSN=smtp://localhost:1025
 ```
 
 6. Create database and run migrations:
@@ -68,14 +73,19 @@ php bin/console doctrine:database:create
 php bin/console doctrine:migrations:migrate
 ```
 
-7. Install SQLite browser (optional, for database management):
+7. Start MailHog for email testing:
+```bash
+docker compose up -d mailhog
+```
+Access MailHog web interface at: http://localhost:8025
+
+8. Install SQLite browser (optional, for database management):
 ```bash
 sudo apt-get install sqlitebrowser
 ```
 
 To view the database:
 ```bash
-sudo apt-get install sqlitebrowser
 sqlitebrowser database/db.sqlite
 ```
 
@@ -103,7 +113,9 @@ Response:
     "token": "jwt_token_here"
 }
 
-Note: A secure HTTP-only cookie (BEARER) will also be set containing the JWT token
+Notes: 
+- A secure HTTP-only cookie (BEARER) will be set containing the JWT token
+- Account must be verified through email before login is allowed
 ```
 
 #### Register
@@ -119,11 +131,80 @@ Content-Type: application/json
 
 Response:
 {
-    "message": "User registered successfully",
+    "message": "User registered successfully. Please check your email for the verification code.",
     "user": {
         "id": 1,
         "email": "user@example.com",
-        "name": "User Name"
+        "name": "User Name",
+        "isVerified": false
+    }
+}
+```
+
+Registration and Verification Process:
+1. User submits registration data
+2. System validates the input
+3. If valid, creates unverified account and sends verification code via email
+4. User must verify their account using the code within 15 minutes
+
+#### Verify Account
+```http
+POST /api/auth/verify-account
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "code": "123456"
+}
+
+Response:
+{
+    "message": "Account verified successfully",
+    "user": {
+        "id": 1,
+        "email": "user@example.com",
+        "name": "User Name",
+        "isVerified": true
+    }
+}
+```
+
+Account Verification Features:
+- 6-digit verification codes
+- Codes expire after 15 minutes
+- One-time use codes (cleared after verification)
+- Automatic code invalidation and cleanup
+- Secure state management
+- Clear error messages for:
+  - Invalid codes
+  - Expired codes
+  - Already verified accounts
+  - Non-existent accounts
+
+Registration Validation Rules:
+- Email:
+  - Must be a valid email format
+  - Maximum length: 180 characters
+  - Must be unique (no duplicate accounts)
+- Password:
+  - Minimum length: 8 characters
+  - Maximum length: 4096 characters
+  - Must contain at least one letter and one number
+  - Cannot be empty
+- Name:
+  - Minimum length: 2 characters
+  - Maximum length: 255 characters
+  - Can only contain letters, spaces, hyphens and apostrophes
+  - Cannot be empty
+
+Error Response Example:
+```http
+{
+    "message": "Validation failed",
+    "errors": {
+        "email": ["The email invalid-email is not a valid email"],
+        "password": ["Password must contain at least one letter and one number"],
+        "name": ["Name can only contain letters, spaces, hyphens and apostrophes"]
     }
 }
 ```
@@ -152,6 +233,73 @@ Response:
     "message": "Logged out successfully"
 }
 ```
+
+### Password Reset
+
+#### Request Password Reset
+```http
+POST /api/auth/forgot-password
+Content-Type: application/json
+
+{
+    "email": "user@example.com"
+}
+
+Response:
+{
+    "message": "If an account exists for this email, you will receive a verification code"
+}
+```
+
+#### Verify Reset Code
+```http
+POST /api/auth/verify-reset-code
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "code": "123456"
+}
+
+Response:
+{
+    "message": "Verification code is valid"
+}
+```
+
+#### Reset Password
+```http
+POST /api/auth/reset-password
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "code": "123456",
+    "new_password": "new_password123"
+}
+
+Response:
+{
+    "message": "Password has been successfully reset"
+}
+```
+
+Password Reset Features:
+- 6-digit verification codes
+- Codes expire after 15 minutes
+- One-time use codes (automatically cleared after password reset)
+- Automatic code invalidation and cleanup
+- Secure state management (codes cleared on password change)
+- Rate limiting on verification attempts
+- No user enumeration (consistent responses whether email exists or not)
+
+### Development Email Testing
+
+The application uses MailHog for email testing in development:
+- All emails are captured by MailHog
+- Access the MailHog web interface at http://localhost:8025
+- View all sent emails, including password reset codes
+- No real emails are sent in development
 
 ### 2. Basic Event Management
 
@@ -319,6 +467,66 @@ Response:
     ]
 }
 ```
+
+### 5. User Events
+
+#### Get My Created Events
+```http
+GET /api/events/my-created
+Authorization: Bearer <token>
+
+Response:
+{
+    "total": 2,
+    "events": [
+        {
+            "id": 1,
+            "title": "My Event",
+            "description": "Event Description",
+            "startDate": "2024-12-31T18:00:00Z",
+            "endDate": "2024-12-31T22:00:00Z",
+            "location": "Event Location",
+            "available_places": 100,
+            "price": 0,
+            "attendees_count": 45,
+            "is_full": false
+        }
+    ]
+}
+```
+
+#### Get My Attended Events
+```http
+GET /api/events/my-attended
+Authorization: Bearer <token>
+
+Response:
+{
+    "total": 2,
+    "events": [
+        {
+            "id": 1,
+            "title": "Event Title",
+            "description": "Event Description",
+            "startDate": "2024-12-31T18:00:00Z",
+            "endDate": "2024-12-31T22:00:00Z",
+            "location": "Event Location",
+            "available_places": 100,
+            "price": 0,
+            "creator": {
+                "id": 2,
+                "name": "Creator Name"
+            }
+        }
+    ]
+}
+```
+
+These endpoints allow you to:
+- View all events you have created
+- View all events you are attending
+- Requires authentication (JWT token)
+- Returns events with relevant details and statistics
 
 ## Testing
 

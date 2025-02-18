@@ -19,6 +19,29 @@ class EventController extends AbstractController
     {
     }
 
+    #[Route('/my-created', name: 'event_my_created', methods: ['GET'])]
+    public function myCreatedEvents(#[CurrentUser] User $user): JsonResponse
+    {
+        $events = $this->entityManager->getRepository(Event::class)
+            ->findBy(['creator' => $user], ['createdAt' => 'DESC']);
+
+        return $this->json([
+            'total' => count($events),
+            'events' => $events
+        ]);
+    }
+
+    #[Route('/my-attended', name: 'event_my_attended', methods: ['GET'])]
+    public function myAttendedEvents(#[CurrentUser] User $user): JsonResponse
+    {
+        $events = $user->getAttendedEvents()->toArray();
+
+        return $this->json([
+            'total' => count($events),
+            'events' => $events
+        ]);
+    }
+
     #[Route('', name: 'event_list', methods: ['GET'])]
     public function list(): JsonResponse
     {
